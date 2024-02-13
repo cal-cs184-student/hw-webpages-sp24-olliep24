@@ -1,7 +1,253 @@
-<html>
-	<head>
-	</head>
-	<body>
-		Homework 1 index.html here
-	</body>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+<style>
+  body {
+    padding: 100px;
+    width: 1000px;
+    margin: auto;
+    text-align: left;
+    font-weight: 300;
+    font-family: 'Open Sans', sans-serif;
+    color: #121212;
+  }
+  h1, h2, h3, h4 {
+    font-family: 'Source Sans Pro', sans-serif;
+  }
+   code {
+     font-family: monospace;
+     color: crimson;
+     background-color: #f1f1f1;
+     padding: 2px;
+     font-size: 105%;
+     border-radius: 0.25rem;
+   }
+</style>
+<title>CS 184/284A Rasterizer</title>
+<meta http-equiv="content-type" content="text/html; charset=utf-8" />
+<link href="https://fonts.googleapis.com/css?family=Open+Sans|Source+Sans+Pro" rel="stylesheet">
+</head>
+
+
+<body>
+
+<h1 align="middle">CS 184/284A: Computer Graphics and Imaging, Spring 2024</h1>
+<h1 align="middle">Homework 1: Rasterizer</h1>
+<h2 align="middle">Oliver Petrick & David Yang</h2>
+
+<br><br>
+
+<div>
+
+<h2 align="middle">Overview</h2>
+<p>Give a high-level overview of what you implemented in this homework Think about what you've built as a whole. Share your thoughts on what interesting things you've learned from completing the homework.</p>
+
+<h2 align="middle">Section I: Rasterization</h2>
+
+<h3 align="middle">Part 1: Rasterizing single-color triangles</h3>
+<p>We begin by finding the bounding box of the triangle. We do this by finding the min/max x and y coordinates from the three given vertices.
+Next, we loop through each point in our bounding box and check if the center of each sample point is within the triangle. We use our helper
+  method <code>line_test</code> to check if the given point is/on the halfplane and take into account the passed-in order of the vertices
+  (clockwise or counterclockwise). If the sample point is within the triangle, we use <code>fill point</code> to color it correctly. Our
+algorithm is no worse than one that checks each sample within the bounding box of the triangle because that is exactly what we are doing.
+In both the bounding box algorithm and our algorithm, the runtime is <code>O(n^2)</code>, where <code>n = width of bounding box</code>.</p>
+
+<!-- <p>Here is an example 2x2 gridlike structure using an HTML table. Each <b>tr</b> is a row and each <b>td</b> is a column in that row. You might find this useful for framing and showing your result images in an organized fashion.</p> -->
+
+<div align="middle">
+  <table style="width:100%">
+    <tr>
+      <td>
+        <img src="images/task1-example.png" align="middle" width="400px"/>
+        <figcaption align="middle">Task 1 Showcase.</figcaption>
+      </td>
+    </tr>
+  </table>
+</div>
+
+
+<h3 align="middle">Part 2: Antialiasing triangles</h3>
+<p>We began by making sure the size of the supersample vector <code>sample_buffer</code> is correctly scaled by
+  <code>sample_rate</code> whenever it is resized in methods like <code>set_framebuffer_target</code> and
+<code>set_sample_rate</code>. This ensures that if the <code>sample_rate</code> is for example 4, the <code>sample_buffer</code>
+is 4 times as big to account for our supersampling. Then, we updated <code>rasterize_triangle</code> by scaling all the point
+coordinates by <code>sqrt(sample_rate)</code>. We also stopped calling <code>fill_pixel</code> in <code>rasterize_triangle</code>
+and instead manually fill in <code>sample_buffer</code> because we wanted to make sure lines and points aren't supersampled. Instead,
+we updated <code>fill_pixel</code> so that it fills the cells corresponding to the <code>framebuffer</code> all with the point or line color.
+The final step in the antialiasing process is to average the supersample back down into our original <code>framebuffer</code> size.
+To do this, we updated <code>resolve_to_framebuffer</code> so that it loops through each <code>sqrt(sample_rate) x sqrt(sample_rate)</code>
+square in the <code>sample_buffer</code> and averages their color values. Then, this averaged color is placed in the corresponding cell of the
+<code>framebuffer</code>. <br>
+
+Supersampling is useful because it allows us to antialias our triangles. Again, we do this by sampling multiple points within the original
+  and then averaging their colors to get a more "blended" look.</p>
+
+<div align="middle">
+  <table style="width:100%">
+    <tr>
+      <td>
+        <img src="images/task2-rate-1.png" align="middle" width="400px"/>
+        <figcaption align="middle">Sample rate = 1</figcaption>
+      </td>
+      <td>
+        <img src="images/task2-rate-4.png" align="middle" width="400px"/>
+        <figcaption align="middle">Sample rate = 4</figcaption>
+      </td>
+    </tr>
+    <br>
+    <tr>
+      <td>
+        <img src="images/task2-rate-16.png" align="middle" width="400px"/>
+        <figcaption align="middle">Sample rate = 16</figcaption>
+      </td>
+    </tr>
+  </table>
+</div>
+
+<h3 align="middle">Part 3: Transforms</h3>
+ <p>As seen below, we are trying to make the cubeman <a href="https://en.wikipedia.org/wiki/Dab_(dance)" target="_blank">dab</a>. We rotated the left arm to point upwards and rotated the
+ right arm to point upwards as well. We also made the forearm of the right arm rotate inwards so the arm bends. Lastly,
+ We rotated the head and torso so that the cubeman looks like he is leaning into the pose.</p>
+
+  <div align="middle">
+    <table style="width:100%">
+      <tr>
+        <td>
+          <img src="images/task3-robot.png" align="middle" width="400px"/>
+          <figcaption align="middle">Robot Dabbing</figcaption>
+        </td>
+      </tr>
+    </table>
+  </div>
+
+
+
+<h2 align="middle">Section II: Sampling</h2>
+
+<h3 align="middle">Part 4: Barycentric coordinates</h3>
+  <p>Barycentric coordinates are used for interpolation. We can think of them as a list of weights corresponding to a list of attributes
+    which allows us to interpolate values. In our example, these attributes are the three colors at the three vertices of a triangle.
+  We can get the barycentric coordinates of each pixel within the triangle, which tells us how much weight to assign to each vertex color. These coordinates
+  then allow us to linearly interpolate the colors to get a blended triangle.</p>
+
+  <div align="middle">
+    <table style="width:100%">
+      <tr>
+        <td>
+          <img src="images/task4-triangle.png" align="middle" width="400px"/>
+          <figcaption align="middle">Barycentric Coordinate Interpolation with Colors</figcaption>
+        </td>
+      </tr>
+    </table>
+  </div>
+
+<h3 align="middle">Part 5: "Pixel sampling" for texture mapping</h3>
+  <p>Pixel sampling in general is simply sampling at a specific point to use an attribute in some way. We applied
+    this concept to texture maps by converting to the corresponding texture map coordinates and getting the color from there.
+    The first type of sampling was nearest sampling, which means we simply found the closest discrete point in the texture map
+  and applied its color to our point. The second type of sampling was bilinear sampling, which finds the average color
+  of the four discrete neighbors and uses lerping to weight the colors based on the distance of the point from
+    those neighbors.</p>
+
+  <div align="middle">
+    <table style="width:100%">
+      <tr>
+        <td>
+          <img src="images/task5-nearest-1.png" align="middle" width="400px"/>
+          <figcaption align="middle">Sampling method: Nearest. Sample rate = 1</figcaption>
+        </td>
+        <td>
+          <img src="images/task5-bilinear-1.png" align="middle" width="400px"/>
+          <figcaption align="middle">Sampling method: Bilinear. Sample rate = 1</figcaption>
+        </td>
+      </tr>
+      <br>
+      <tr>
+        <td>
+          <img src="images/task5-nearest-16.png" align="middle" width="400px"/>
+          <figcaption align="middle">Sampling method: Nearest. Sample rate = 16</figcaption>
+        </td>
+        <td>
+          <img src="images/task5-bilinear-16.png" align="middle" width="400px"/>
+          <figcaption align="middle">Sampling method: Bilinear. Sample rate = 16</figcaption>
+        </td>
+      </tr>
+    </table>
+
+    <p>Note the large difference in aliasing between nearest and bilinear sampling when the supersampling rate is 1. This large
+    difference is due to the bilinear sampling interpolating the 4 nearest colors closest to that point rather than just
+      taking the color nearest the point. This reduces aliasing because it reduces the frequency changes between pixels.
+      When the supersampling rate is increased to 16, the difference in aliasing is minimal between nearest and bilinear
+      sampling because the supersampling is already reducing aliasing so much that differing the sampling method has
+      minimal effect. Also note the difference between bilinear sampling at a supersample rate of 1 and nearest sampling at a
+      supersample rate of 16. There is a noticeable amount of reduced aliasing in the supersampling rate of 16 because,
+      as noted before, the antialiasing effect of increasing the supersampling rate to 16 is very significant.
+    </p>
+  </div>
+
+
+<h3 align="middle">Part 6: "Level sampling" with mipmaps for texture mapping</h3>
+
+<p>Level sampling is estimating the width of the texture footprint to decide how detailed of a color
+to apply to our point. In terms of texture mapping, we converted to u,v coordinates and used the derivatives
+  to calculate which level of texture map we wanted to use for a specific point. Supersampling takes more memory and
+is slower since we need to loop through a larger <code>sample buffer</code>; however, its antialiasing effects
+are quite powerful, especially when we get to a supersample rate of 16. Level sampling technically also takes more memory
+since we need to store different levels of texture maps; however, note that these sizes are a geometric sequence
+so the additional memory is not too significant. The speed change is also minimal since we can quickly access a point on any
+level texture map; the antialiasing effects are also good for nearest and bilinear. Finally, pixel sampling only requires a single
+texture map and is very fast since we are just accessing that single map. In terms of antialiasing, bilinear sampling is quite good
+since we can get the weighted average of the four closest neighbors. <br>
+
+Supersampling at a higher rate has the best antialiasing effects but we must make tradeoffs in terms of speed and memory.
+Pixel and level sampling on texture maps are a good way to get great antialiasing effects without using as much memory
+or compensating for speed.</p>
+
+  <div align="middle">
+    <table style="width:100%">
+      <tr>
+        <td>
+          <img src="images/task6-l=zero-p=nearest-1.png" align="middle" width="400px"/>
+          <figcaption align="middle">Level Method: zero. Sampling method: nearest. Sample rate = 1</figcaption>
+        </td>
+        <td>
+          <img src="images/task6-l=nearest-p=nearest-1.png" align="middle" width="400px"/>
+          <figcaption align="middle">Level Method: nearest. Sampling method: nearest. Sample rate = 1</figcaption>
+        </td>
+      </tr>
+      <br>
+      <tr>
+        <td>
+          <img src="images/task6-l=bilinear-p=nearest-1.png" align="middle" width="400px"/>
+          <figcaption align="middle">Level Method: bilinear. Sampling method: nearest. Sample rate = 1</figcaption>
+        </td>
+        <td>
+          <img src="images/task6-l=bileanear-p=bilinear-1.png" align="middle" width="400px"/>
+          <figcaption align="middle">Level Method: bilinear. Sampling method: bilinear. Sample rate = 1</figcaption>
+        </td>
+      </tr>
+      <br>
+      <tr>
+        <td>
+          <img src="images/task6-l=bilinear-p=bilinear-16.png" align="middle" width="400px"/>
+          <figcaption align="middle">Level Method: bilinear. Sampling method: bilinear. Sample rate = 16</figcaption>
+        </td>
+      </tr>
+    </table>
+
+    <p>Note that not all the texture sampling combinations are listed, but all the benefits of changing them
+    independently and in combination with each other can be seen with the quality of the eye rendering. Starting with
+    our level method being zero, sampling method being nearest, and the supersampling rate being 1, we get the most aliasing
+    as expected. Changing the level method has noticeable effects on aliasing while keeping the other factors constant.
+    When changing the sampling method from nearest to bilinear, its antialising effects as described in task 5 are
+    displayed. As commonly seen earlier, increasing the supersampling rate to 16 also gave a noticeable difference
+    in aliasing as well.</p>
+
+
+<h2 align="middle">Section III: Art Competition</h2>
+<p>If you are not participating in the optional art competition, don't worry about this section!</p>
+
+<h3 align="middle">Part 7: Draw something interesting!</h3>
+
+</body>
 </html>
